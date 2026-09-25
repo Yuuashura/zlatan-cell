@@ -9,6 +9,7 @@ export default defineConfig({
     react(),
   ],
   server: {
+    allowedHosts : ['all'],
     port: 5173,
     proxy: {
       '/api': {

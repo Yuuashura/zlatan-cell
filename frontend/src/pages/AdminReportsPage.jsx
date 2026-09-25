@@ -193,7 +193,18 @@ export default function AdminReportsPage() {
                     <td className="py-3 px-3 text-slate-500 whitespace-nowrap">
                       {new Date(r.timestamp).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </td>
-                    <td className="py-3 px-3 font-mono font-bold text-slate-800 whitespace-nowrap">{r.transactionId}</td>
+                    <td className="py-3 px-3 font-mono font-bold text-slate-800 whitespace-nowrap">
+                      {r.transactionId}
+                      {r.target === 'PLN_METER' && (
+                        <Link
+                          to={`/struk/${r.transactionId}`}
+                          target="_blank"
+                          className="mt-0.5 flex items-center gap-1 font-sans text-[10px] font-semibold text-slate-400 hover:text-blue-600"
+                        >
+                          <Printer className="w-3 h-3" /> Cetak struk
+                        </Link>
+                      )}
+                    </td>
                     <td className="py-3 px-3 text-slate-700">
                       {r.customer}
                       {r.customerNumber && <div className="text-[10px] font-mono text-slate-400">{r.customerNumber}</div>}

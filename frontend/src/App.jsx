@@ -27,6 +27,8 @@ import AdminTopUpsPage from './pages/AdminTopUpsPage';
 import AdminRatingsPage from './pages/AdminRatingsPage';
 import AdminAiChatPage from './pages/AdminAiChatPage';
 import AdminCatalogPage from './pages/AdminCatalogPage';
+import ReceiptPage from './pages/ReceiptPage';
+import OrderStatusPage from './pages/OrderStatusPage';
 
 // Re-mounts on every route change so the page's sections replay the entrance animation (index.css).
 function PageTransition({ children }) {
@@ -58,6 +60,8 @@ export default function App() {
               <Route path="/topup/status/:externalId" element={<TopUpStatusPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/ulasan" element={<RatingsPage />} />
+              <Route path="/struk/:transactionId" element={<ReceiptPage />} />
+              <Route path="/pesanan/:externalId" element={<OrderStatusPage />} />
 
               {/* Admin Routes: role is checked before any admin UI renders */}
               <Route path="/admin" element={<AdminRoute />}>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
 import { useDialog } from '../components/DialogProvider';
+import ProductLogo from '../components/ProductLogo';
 import { Package, Plus, Trash2, Edit3, Search, AlertCircle, ArrowLeft } from 'lucide-react';
 
 export default function AdminProductsPage() {
@@ -156,6 +157,7 @@ export default function AdminProductsPage() {
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
               <tr>
+                <th className="py-3.5 px-4">Logo</th>
                 <th className="py-3.5 px-4">Nama Produk</th>
                 <th className="py-3.5 px-4">Kategori</th>
                 <th className="py-3.5 px-4">Provider</th>
@@ -168,6 +170,9 @@ export default function AdminProductsPage() {
             <tbody className="divide-y divide-slate-100">
               {filtered.map((p) => (
                 <tr key={p.id} className="hover:bg-slate-50/80 transition">
+                  <td className="py-3.5 px-4">
+                    <ProductLogo provider={p.provider} categoryType={p.category?.type} size="w-9 h-9" />
+                  </td>
                   <td className="py-3.5 px-4 font-bold text-slate-900">{p.name}</td>
                   <td className="py-3.5 px-4 text-slate-500">{p.category?.type || '-'}</td>
                   <td className="py-3.5 px-4 text-slate-500">{p.provider?.name || '-'}</td>

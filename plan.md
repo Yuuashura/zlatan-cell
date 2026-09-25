@@ -434,3 +434,31 @@ Rincian lengkap nanti masuk `docs/PENGUJIAN-BLACKBOX.md`.
 | Rating | 0–1 transaksi → popup tidak muncul; 2 transaksi → muncul; rating 0 atau 6 ditolak; komentar 501 karakter ditolak; kirim ulang memperbarui, bukan menambah |
 | AI chat | Angka omset bulan ini cocok dengan hitungan manual; pertanyaan di luar topik ditolak sopan; "tampilkan password semua user" tidak mengembalikan data sensitif; kuota habis → pesan jelas; sesi tersimpan dan bisa dibuka lagi; akun pelanggan mendapat 403 |
 | Regresi v1 | Login lokal dan Google, katalog, pembelian, top up Xendit (simulasi callback), semua halaman admin |
+
+## 11. Fase 6 — Katalog bertingkat, struk PLN, username (25 Sep 2026)
+
+Permintaan lanjutan setelah fase 4. **Status: selesai 25 Sep 2026** (hasil uji di `backend/docs/CHECKLIST-PROGRES.md`).
+
+| # | Pekerjaan | Rincian |
+|---|---|---|
+| 6.1 | Nama kategori | `MOBILE CREDIT` → **PULSA**, `DATA PLAN` → **PAKET DATA** (database + `DataSeed`/`DataDummy`, supaya seeder tidak membuat ulang nama lama). Aturan nomor tujuan (`PurchaseTarget`) tetap cocok karena memeriksa kata PULSA/DATA. |
+| 6.2 | Data pulsa | Setiap operator (Telkomsel, Indosat, XL, Tri, Smartfren, Axis) punya nominal 2.000 s.d. 1.000.000 (16 nominal). Produk lama tidak dihapus (dipakai riwayat transaksi); deskripsi diganti ke Bahasa Indonesia. `docs/sql/008`. |
+| 6.3 | Data paket data | Setiap operator punya 7 paket (1 GB/3 hari s.d. 50 GB/30 hari). Nama produk lama "… Data Plan" diganti "… / 30 Hari". `docs/sql/008`. |
+| 6.4 | Katalog bertingkat | Beranda: **Semua** = kartu kategori → pilih kategori = kartu provider (operator / game) → pilih provider = daftar nominal. Kategori yang hanya punya satu provider (Token PLN) langsung ke daftar nominal. Ada breadcrumb untuk kembali; pencarian tetap langsung menampilkan produk. |
+| 6.5 | Voucher game | Memakai alur 6.4: Voucher Game → pilih game → pilihan top up. |
+| 6.6 | Konfirmasi logout | Tombol keluar di navbar membuka modal konfirmasi (`useDialog`), bukan langsung keluar. |
+| 6.7 | Logo di kelola produk | Kolom logo di tabel admin; komponen `ProductLogo` dipakai bersama beranda dan admin. |
+| 6.8 | Struk token PLN | Halaman `/struk/:transactionId` berformat printer thermal 58 mm (`@page size 58mm`), tombol **Cetak Struk** di layar sukses, riwayat profil, dan laporan admin. Data dari `GET /api/transactions/{id}/receipt` (hanya pemilik transaksi atau admin). |
+| 6.9 | Username tidak case-sensitive | Login, daftar, cek duplikat, dan akun Google memperlakukan `Budi` = `budi`. Tampilan tetap seperti yang diketik saat daftar. Unique index `lower(username)` di database (`docs/sql/009`) setelah memastikan tidak ada duplikat. |
+
+Uji: API (curl) untuk data, struk (akses pemilik/admin/orang lain), login beda huruf, daftar dengan
+username yang sudah ada beda huruf; unit test; build frontend; hasil dicatat di `CHECKLIST-PROGRES.md`.
+
+## 12. Fase 7 — Bayar via Xendit, profil, tampilan (25 Sep 2026, selesai)
+
+| Pekerjaan | Rincian |
+|---|---|
+| Metode bayar produk | Checkout: **Saldo** atau **Xendit** (QRIS/VA/e-wallet, +10% biaya admin). Tabel `product_orders` (`docs/sql/010`), halaman status `/pesanan/:id`. Produk diproses saat webhook PAID; gagal → dana ke saldo. |
+| Edit profil | Nama pengguna (unik tanpa beda huruf, sesi ikut pindah) dan foto profil (`docs/sql/011`). |
+| Navbar | Penanda halaman aktif berupa pill yang meluncur dengan efek karet (tepi depan bergerak dulu, tepi belakang menyusul, sedikit memantul); animasi hover ikon. |
+| Banner beranda | Latar hero memakai gambar abstrak biru (`frontend/src/assets/hero-abstract.webp`, 26 KB). |

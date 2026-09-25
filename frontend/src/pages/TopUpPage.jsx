@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { Zap, Wallet, CreditCard, ArrowRight, CheckCircle2, Clock, AlertCircle, Sparkles, Loader2 } from 'lucide-react';
+import { Zap, Wallet, CreditCard, ArrowRight, Clock, AlertCircle, Sparkles, Loader2 } from 'lucide-react';
 import { CircularSpinner } from '../components/Skeletons';
 
 export default function TopUpPage() {
@@ -14,7 +14,6 @@ export default function TopUpPage() {
   const [loading, setLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [successMsg, setSuccessMsg] = useState(null);
 
   const presets = [10000, 25000, 50000, 100000, 200000, 500000];
 
@@ -61,24 +60,6 @@ export default function TopUpPage() {
     }
   };
 
-  const handleManualRequest = async () => {
-    if (amount < 10000) {
-      setError('Minimal nominal top up adalah Rp 10.000');
-      return;
-    }
-    setError(null);
-    setLoading(true);
-    try {
-      const res = await api.post('/topups/manual', { amount });
-      setSuccessMsg(res.data.message || 'Permintaan top up manual berhasil dibuat.');
-      await loadHistory();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Gagal mengajukan top up manual.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       
@@ -87,7 +68,7 @@ export default function TopUpPage() {
           <Wallet className="w-8 h-8 text-blue-600" /> Pengisian Saldo Akun
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Isi saldo akun Zelatan Cell Anda secara instan menggunakan payment gateway Xendit atau ajukan manual.
+          Isi saldo akun Zelatan Cell Anda secara instan menggunakan payment gateway Xendit.
         </p>
       </div>
 
@@ -113,13 +94,6 @@ export default function TopUpPage() {
             </div>
           )}
 
-          {successMsg && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl p-3 text-xs mb-5 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
-              <span>{successMsg}</span>
-            </div>
-          )}
-
           <div className="mb-6">
             <label className="block text-xs font-bold text-slate-700 mb-2">Pilih Nominal Top Up</label>
             <div className="grid grid-cols-3 gap-2.5 mb-3">
@@ -139,15 +113,17 @@ export default function TopUpPage() {
               ))}
             </div>
 
+            {/* Text input, digits only: a number input keeps the 0 of an emptied field (0100000) */}
             <label className="block text-xs font-semibold text-slate-500 mb-1.5">Atau Masukkan Nominal Sendiri:</label>
             <div className="relative">
               <span className="absolute left-3.5 top-2.5 text-xs font-bold text-slate-400">Rp</span>
               <input
-                type="number"
-                min="10000"
-                step="1000"
-                value={amount}
-                onChange={(e) => setAmount(Number(e.target.value))}
+                type="text"
+                inputMode="numeric"
+                aria-label="Nominal top up"
+                placeholder="Minimal 10.000"
+                value={amount ? amount.toLocaleString('id-ID') : ''}
+                onChange={(e) => setAmount(Number(e.target.value.replace(/\D/g, '').slice(0, 9)))}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -166,20 +142,6 @@ export default function TopUpPage() {
             <p className="text-[11px] text-center text-slate-400">
               Tersedia QRIS, BCA, BNI, BRI, Mandiri VA, OVO, & DANA. Saldo bertambah otomatis seketika setelah bayar.
             </p>
-
-            <div className="relative my-4 text-center">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
-              <span className="relative bg-white px-3 text-[11px] text-slate-400">atau</span>
-            </div>
-
-            {/* Manual Payment */}
-            <button
-              disabled={loading}
-              onClick={handleManualRequest}
-              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-2xl text-xs transition disabled:opacity-50"
-            >
-              Ajukan Permintaan Manual (Konfirmasi Admin)
-            </button>
           </div>
 
         </div>

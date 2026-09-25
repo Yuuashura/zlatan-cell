@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { User, Wallet, Phone, Calendar, ShoppingBag, ArrowUpRight, Search, CheckCircle2, XCircle } from 'lucide-react';
+import { User, Wallet, Phone, Calendar, ShoppingBag, ArrowUpRight, Search, CheckCircle2, XCircle, Printer } from 'lucide-react';
 import { TableRowSkeleton } from '../components/Skeletons';
 import EditProfileForm from '../components/EditProfileForm';
 import { formatCode } from '../purchaseTarget';
@@ -161,9 +161,21 @@ export default function ProfilePage() {
                     </td>
                     <td className="py-3.5 px-3 font-mono text-blue-600 font-bold bg-blue-50/50 rounded px-2 whitespace-nowrap">
                       {formatCode(t.serialNumber, t.target) || '-'}
+                      {t.target === 'PLN_METER' && (
+                        <Link
+                          to={`/struk/${t.transactionId}`}
+                          target="_blank"
+                          className="mt-1 flex items-center gap-1 font-sans text-[10px] font-semibold text-slate-500 hover:text-blue-600"
+                        >
+                          <Printer className="w-3 h-3" /> Cetak struk
+                        </Link>
+                      )}
                     </td>
                     <td className="py-3.5 px-3 font-bold text-slate-900 whitespace-nowrap">
-                      {formatRupiah(t.amountPaid)}
+                      {formatRupiah(t.amountPaid + (t.adminFee || 0))}
+                      {t.paymentMethod === 'XENDIT' && (
+                        <div className="text-[10px] font-normal text-slate-400">via Xendit, admin {formatRupiah(t.adminFee)}</div>
+                      )}
                     </td>
                     <td className="py-3.5 px-3 text-center whitespace-nowrap">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${

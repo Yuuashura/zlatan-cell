@@ -1,13 +1,53 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useLayoutEffect, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useDialog } from './DialogProvider';
 import { ShoppingBag, Zap, Wallet, User, LogOut, LayoutDashboard, Loader2, Star } from 'lucide-react';
 
 export default function Navbar() {
   const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
+  const { confirm } = useDialog();
+  const { pathname } = useLocation();
+
+  const links = [
+    { to: '/', label: 'Katalog', Icon: ShoppingBag },
+    { to: '/topup', label: 'Top Up Saldo', Icon: Wallet },
+    { to: '/ulasan', label: 'Ulasan', Icon: Star },
+    ...(user ? [{ to: '/profile', label: 'Riwayat Transaksi', Icon: User }] : []),
+    ...(user?.role === 'ROLE_ADMIN' ? [{ to: '/admin', label: 'Dashboard Admin', Icon: LayoutDashboard, admin: true }] : []),
+  ];
+  const activeTo = links.find(({ to }) => (to === '/' ? pathname === '/' : pathname === to || pathname.startsWith(to + '/')))?.to;
+
+  // Pill geometry. dir decides which edge leads so the pill stretches toward the new page, then snaps.
+  const linksRef = useRef(null);
+  const linkRefs = useRef({});
+  const [pill, setPill] = useState({ left: 0, right: 0, visible: false, dir: 1, animate: false });
+  const linkKey = links.map((l) => l.to).join();
+  useLayoutEffect(() => {
+    const place = () => {
+      const box = linksRef.current;
+      const el = linkRefs.current[activeTo];
+      if (!box || !el) {
+        setPill((p) => ({ ...p, visible: false, animate: false }));
+        return;
+      }
+      const left = el.offsetLeft;
+      const right = box.clientWidth - (el.offsetLeft + el.offsetWidth);
+      setPill((p) => ({ left, right, visible: true, dir: left >= p.left ? 1 : -1, animate: p.visible }));
+    };
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [activeTo, linkKey]);
 
   const handleLogout = async () => {
+    const ok = await confirm('Sesi Anda di perangkat ini akan diakhiri. Anda perlu login lagi untuk bertransaksi.', {
+      title: 'Keluar dari akun?',
+      confirmText: 'Ya, keluar',
+      danger: true,
+    });
+    if (!ok) return;
     await logout();
     navigate('/login');
   };
@@ -17,7 +57,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+    <nav className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm print:hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           
@@ -34,27 +74,30 @@ export default function Navbar() {
             </div>
           </Link>
 
-          {/* Navigation Links */}
-          <div className="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-600">
-            <Link to="/" className="hover:text-blue-600 transition flex items-center gap-1.5">
-              <ShoppingBag className="w-4 h-4" /> Katalog
-            </Link>
-            <Link to="/topup" className="hover:text-blue-600 transition flex items-center gap-1.5">
-              <Wallet className="w-4 h-4" /> Top Up Saldo
-            </Link>
-            <Link to="/ulasan" className="hover:text-blue-600 transition flex items-center gap-1.5">
-              <Star className="w-4 h-4" /> Ulasan
-            </Link>
-            {user && (
-              <Link to="/profile" className="hover:text-blue-600 transition flex items-center gap-1.5">
-                <User className="w-4 h-4" /> Riwayat Transaksi
-              </Link>
-            )}
-            {user?.role === 'ROLE_ADMIN' && (
-              <Link to="/admin" className="text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-semibold">
-                <LayoutDashboard className="w-4 h-4" /> Dashboard Admin
-              </Link>
-            )}
+          {/* Navigation Links: the pill slides to the active page like a stretched rubber band */}
+          <div ref={linksRef} className="hidden md:flex relative items-center gap-1 text-sm font-medium text-slate-600">
+            <span
+              aria-hidden="true"
+              className={`nav-pill ${pill.dir < 0 ? 'nav-pill-left' : ''} ${pill.animate ? '' : 'nav-pill-instant'}`}
+              style={{ left: pill.left, right: pill.right, opacity: pill.visible ? 1 : 0 }}
+            />
+            {links.map(({ to, label, Icon, admin }) => {
+              const active = to === activeTo;
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  ref={(el) => (linkRefs.current[to] = el)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`nav-link group relative z-10 flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors duration-200 ${
+                    active ? (admin ? 'text-indigo-700 font-semibold' : 'text-blue-700 font-semibold') : admin ? 'text-indigo-600 hover:text-indigo-700' : 'hover:text-blue-600'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 transition-transform duration-300 group-hover:-rotate-12 group-hover:scale-115" />
+                  {label}
+                </Link>
+              );
+            })}
           </div>
 
           {/* User Section */}

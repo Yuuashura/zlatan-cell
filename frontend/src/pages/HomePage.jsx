@@ -4,7 +4,8 @@ import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { 
   Flame, Tag, Clock, CheckCircle2, AlertCircle, ShoppingCart, 
-  Search, Zap, ArrowRight, ShieldAlert, Sparkles, RefreshCw, Copy, Check
+  Search, Zap, ArrowRight, ShieldAlert, Sparkles, RefreshCw, Copy, Check,
+  ChevronRight, Printer, Wallet, CreditCard
 } from 'lucide-react';
 import { 
   ProductCardSkeleton, 
@@ -13,7 +14,12 @@ import {
   CircularSpinner 
 } from '../components/Skeletons';
 import RatingPrompt from '../components/RatingPrompt';
-import { TARGETS, formatCode } from '../purchaseTarget';
+import ProductLogo, { categoryIcon } from '../components/ProductLogo';
+import { TARGETS, formatCode, cleanTargetInput } from '../purchaseTarget';
+import heroBackground from '../assets/hero-abstract.webp';
+
+// Must match OrderService.XENDIT_FEE_RATE (the backend computes the real invoice amount).
+const XENDIT_FEE_RATE = 0.1;
 
 export default function HomePage() {
   const { user, loading: authLoading, refreshUser } = useAuth();
@@ -33,6 +39,7 @@ export default function HomePage() {
   // Checkout modal states
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [customerNumber, setCustomerNumber] = useState('');
+  const [payMethod, setPayMethod] = useState('SALDO'); // SALDO | XENDIT
   const [voucherCode, setVoucherCode] = useState('');
   const [appliedVoucher, setAppliedVoucher] = useState(null);
   const [voucherDiscount, setVoucherDiscount] = useState(0);
@@ -136,6 +143,21 @@ export default function HomePage() {
     }
     setBuying(true);
     setPurchaseResult(null);
+    if (payMethod === 'XENDIT') {
+      // Paid on Xendit's page; the product is processed by the webhook, result on /pesanan/:id
+      try {
+        const res = await api.post('/orders', {
+          productId: selectedProduct.id,
+          voucherCode: voucherDiscount > 0 ? voucherCode.trim() : null,
+          customerNumber: customerNumber.trim(),
+        });
+        window.location.href = res.data.invoiceUrl;
+      } catch (err) {
+        setPurchaseResult({ success: false, message: err.response?.data?.message || 'Pesanan Xendit gagal dibuat.' });
+        setBuying(false);
+      }
+      return;
+    }
     try {
       const res = await api.post('/transactions/buy', {
         productId: selectedProduct.id,
@@ -160,6 +182,7 @@ export default function HomePage() {
     setSelectedProduct(p);
     // pulsa/kuota usually goes to the buyer's own number; PLN meter must be typed
     setCustomerNumber(p.target === 'PHONE' ? user?.phoneNumber || '' : '');
+    setPayMethod('SALDO');
     setVoucherCode(defaultVoucherCode || '');
     setAppliedVoucher(null);
     setVoucherDiscount(0);
@@ -167,18 +190,57 @@ export default function HomePage() {
     setPurchaseResult(null);
   };
 
-  const filteredProducts = products.filter((p) => {
-    if (selectedCategory && p.category?.id !== selectedCategory) return false;
-    if (selectedProvider && p.provider?.id !== selectedProvider) return false;
-    if (searchTerm && !p.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-    return true;
-  });
+  // Catalog tree: category -> providers -> products, only categories that have products.
+  const catalog = categories
+    .map((category) => {
+      const items = products.filter((p) => p.category?.id === category.id);
+      const byProvider = new Map();
+      items.forEach((p) => {
+        const key = p.provider?.id ?? 'none';
+        if (!byProvider.has(key)) byProvider.set(key, { provider: p.provider || { name: category.type }, products: [] });
+        byProvider.get(key).products.push(p);
+      });
+      const providers = [...byProvider.values()].sort((a, b) => (a.provider.id ?? 0) - (b.provider.id ?? 0));
+      return { category, products: items, providers };
+    })
+    .filter((c) => c.products.length > 0);
+  const currentCategory = catalog.find((c) => c.category.id === selectedCategory);
+  const currentProvider = currentCategory?.providers.find((g) => g.provider.id === selectedProvider);
+
+  const term = searchTerm.trim().toLowerCase();
+  const level = term
+    ? 'products'
+    : !currentCategory
+      ? 'categories'
+      : currentCategory.providers.length > 1 && !currentProvider
+        ? 'providers'
+        : 'products';
+  const visibleProducts = term
+    ? products.filter((p) => p.name.toLowerCase().includes(term) && (!currentCategory || p.category?.id === selectedCategory))
+    : currentProvider?.products || currentCategory?.products || [];
+
+  const chooseCategory = (id) => {
+    setSelectedCategory(id);
+    setSelectedProvider(null);
+  };
+  // Same rounding as OrderService: price rounded first, then 10% of it.
+  const subtotal = selectedProduct
+    ? Math.round(Math.max(0, (selectedProduct.isFlashSale ? selectedProduct.flashPrice : selectedProduct.price) - voucherDiscount))
+    : 0;
+  const xenditFee = Math.round(subtotal * XENDIT_FEE_RATE);
+  const payTotal = subtotal + (payMethod === 'XENDIT' ? xenditFee : 0);
+
+  const minPrice = (items) => Math.min(...items.map((p) => (p.isFlashSale ? p.flashPrice : p.price)));
+  const providerNoun = (type = '') => (type.toUpperCase().includes('GAME') ? 'game' : 'operator');
 
   return (
     <div className="min-h-screen pb-16">
       
       {/* Hero Banner */}
-      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 text-white py-12 px-4 sm:px-6 lg:px-8 shadow-inner">
+      <div
+        className="bg-slate-900 bg-cover bg-center text-white py-12 px-4 sm:px-6 lg:px-8 shadow-inner"
+        style={{ backgroundImage: `url(${heroBackground})` }}
+      >
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center gap-8">
             <div className="max-w-2xl">
@@ -425,22 +487,20 @@ export default function HomePage() {
           </div>
         ) : null}
 
-        {/* Filter Bar */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs mb-8 flex flex-col md:flex-row gap-4 justify-between items-center">
-          
-          {/* Search Box */}
+        {/* Catalog: Semua = category cards -> provider cards (operator / game) -> product list */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
           <div className="relative w-full md:w-72">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
             <input
               type="text"
-              placeholder="Cari produk..."
+              placeholder="Cari produk, misal: Telkomsel 10.000"
+              aria-label="Cari produk"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-          {/* Category filters */}
           <div className="flex flex-wrap gap-2 w-full md:w-auto items-center">
             {loading ? (
               <div className="flex gap-2">
@@ -451,23 +511,19 @@ export default function HomePage() {
             ) : (
               <>
                 <button
-                  onClick={() => { setSelectedCategory(null); setSelectedProvider(null); }}
+                  onClick={() => chooseCategory(null)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-                    !selectedCategory && !selectedProvider
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    !selectedCategory ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
                   Semua
                 </button>
-                {categories.map((c) => (
+                {catalog.map(({ category: c }) => (
                   <button
                     key={c.id}
-                    onClick={() => setSelectedCategory(selectedCategory === c.id ? null : c.id)}
+                    onClick={() => chooseCategory(c.id)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-                      selectedCategory === c.id
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      selectedCategory === c.id ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
                     {c.type}
@@ -476,10 +532,37 @@ export default function HomePage() {
               </>
             )}
           </div>
-
         </div>
 
-        {/* Product Grid / Skeleton Loaders */}
+        {/* Breadcrumb */}
+        {!loading && (selectedCategory || term) && (
+          <nav aria-label="Posisi katalog" className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-slate-500 mb-5">
+            <button onClick={() => { setSearchTerm(''); chooseCategory(null); }} className="hover:text-blue-600">
+              Semua Kategori
+            </button>
+            {currentCategory && (
+              <>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+                <button onClick={() => chooseCategory(currentCategory.category.id)} className="hover:text-blue-600">
+                  {currentCategory.category.type}
+                </button>
+              </>
+            )}
+            {currentProvider && (
+              <>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+                <span className="text-slate-900">{currentProvider.provider.name}</span>
+              </>
+            )}
+            {term && (
+              <>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+                <span className="text-slate-900">Hasil pencarian &quot;{searchTerm.trim()}&quot;</span>
+              </>
+            )}
+          </nav>
+        )}
+
         {loading ? (
           <div>
             <div className="text-center py-3 mb-6">
@@ -491,9 +574,51 @@ export default function HomePage() {
               ))}
             </div>
           </div>
+        ) : level === 'categories' ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {catalog.map(({ category: c, products: items, providers: provs }) => {
+              const Icon = categoryIcon(c.type);
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => chooseCategory(c.id)}
+                  className="group bg-white border border-slate-200 rounded-2xl p-5 text-left shadow-xs hover:shadow-md hover:border-blue-300 transition"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 group-hover:bg-blue-600 group-hover:text-white transition">
+                    <Icon className="w-6 h-6" />
+                  </div>
+                  <h3 className="font-black text-slate-900 text-base">{c.type}</h3>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    {provs.length > 1 ? `${provs.length} pilihan ${providerNoun(c.type)} · ` : ''}{items.length} produk
+                  </p>
+                  <p className="text-xs font-bold text-blue-600 mt-3 flex items-center gap-1">
+                    Mulai {formatRupiah(minPrice(items))} <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition" />
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        ) : level === 'providers' ? (
+          <div>
+            <h2 className="text-sm font-bold text-slate-700 mb-4">Pilih {providerNoun(currentCategory.category.type)}</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+              {currentCategory.providers.map(({ provider, products: items }) => (
+                <button
+                  key={provider.id}
+                  onClick={() => setSelectedProvider(provider.id)}
+                  className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-xs hover:shadow-md hover:border-blue-300 transition flex flex-col items-center"
+                >
+                  <ProductLogo provider={provider} categoryType={currentCategory.category.type} size="w-16 h-16" />
+                  <span className="font-bold text-slate-900 text-sm mt-3">{provider.name}</span>
+                  <span className="text-[11px] text-slate-500 mt-0.5">{items.length} pilihan</span>
+                  <span className="text-[11px] font-semibold text-blue-600 mt-1">mulai {formatRupiah(minPrice(items))}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {filteredProducts.map((p) => {
+            {visibleProducts.map((p) => {
               const currentPrice = p.isFlashSale ? p.flashPrice : p.price;
               return (
                 <div
@@ -501,10 +626,13 @@ export default function HomePage() {
                   className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:shadow-md hover:border-blue-300 transition flex flex-col justify-between"
                 >
                   <div>
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-100 px-2 py-0.5 rounded-md">
-                        {p.provider?.name || p.category?.type || 'Produk'}
-                      </span>
+                    <div className="flex justify-between items-start gap-2 mb-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <ProductLogo provider={p.provider} categoryType={p.category?.type} />
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+                          {p.provider?.name || p.category?.type || 'Produk'}
+                        </span>
+                      </div>
                       {p.isFlashSale ? (
                         <span className="bg-rose-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
                           <Flame className="w-2.5 h-2.5 fill-current" /> FLASH
@@ -549,11 +677,11 @@ export default function HomePage() {
           </div>
         )}
 
-        {filteredProducts.length === 0 && !loading && (
+        {level === 'products' && visibleProducts.length === 0 && !loading && (
           <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
             <AlertCircle className="w-8 h-8 text-slate-400 mx-auto mb-2" />
             <p className="text-sm font-semibold text-slate-600">Tidak ada produk yang cocok</p>
-            <p className="text-xs text-slate-400 mt-1">Coba gunakan kata kunci lain atau reset filter</p>
+            <p className="text-xs text-slate-400 mt-1">Coba gunakan kata kunci lain atau pilih kategori lain</p>
           </div>
         )}
 
@@ -611,6 +739,15 @@ export default function HomePage() {
                       </div>
                     </div>
 
+                    {purchaseResult.data?.target === 'PLN_METER' && (
+                      <Link
+                        to={`/struk/${purchaseResult.data.transactionId}`}
+                        target="_blank"
+                        className="w-full mb-2 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-2"
+                      >
+                        <Printer className="w-3.5 h-3.5" /> Cetak Struk Token
+                      </Link>
+                    )}
                     <button
                       onClick={() => setSelectedProduct(null)}
                       className="w-full py-2.5 bg-blue-600 text-white font-bold rounded-xl text-xs shadow-sm"
@@ -649,12 +786,15 @@ export default function HomePage() {
                 {/* Product Info */}
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-4">
                   <div className="text-xs text-slate-400 font-semibold mb-1">Produk</div>
-                  <div className="text-base font-bold text-slate-900">{selectedProduct.name}</div>
+                  <div className="flex items-center gap-3">
+                    <ProductLogo provider={selectedProduct.provider} categoryType={selectedProduct.category?.type} size="w-10 h-10" />
+                    <div className="text-base font-bold text-slate-900">{selectedProduct.name}</div>
+                  </div>
                   <div className="text-xs text-slate-500 mt-1">{selectedProduct.description}</div>
                   <div className="text-[11px] text-slate-400 mt-1">Stok saat ini: <span className="font-bold text-slate-700">{selectedProduct.stock} item</span></div>
                 </div>
 
-                {/* Destination number: phone for pulsa/kuota, meter for PLN */}
+                {/* Destination: phone for pulsa/kuota, meter for PLN, account for games */}
                 {TARGETS[selectedProduct.target] && (
                   <div className="mb-4">
                     <label htmlFor="customer-number" className="block text-xs font-semibold text-slate-700 mb-1.5">
@@ -662,12 +802,12 @@ export default function HomePage() {
                     </label>
                     <input
                       id="customer-number"
-                      type="tel"
-                      inputMode="numeric"
+                      type={selectedProduct.target === 'GAME_ID' ? 'text' : 'tel'}
+                      inputMode={selectedProduct.target === 'GAME_ID' ? 'text' : 'numeric'}
                       autoComplete={selectedProduct.target === 'PHONE' ? 'tel' : 'off'}
                       placeholder={TARGETS[selectedProduct.target].placeholder}
                       value={customerNumber}
-                      onChange={(e) => setCustomerNumber(e.target.value.replace(/[^\d+]/g, '').slice(0, 16))}
+                      onChange={(e) => setCustomerNumber(cleanTargetInput(e.target.value, selectedProduct.target))}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono tracking-wide focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <p className="text-[11px] text-slate-400 mt-1">{TARGETS[selectedProduct.target].hint}</p>
@@ -701,6 +841,39 @@ export default function HomePage() {
                   )}
                 </div>
 
+                {/* Payment method: balance, or a Xendit invoice with a 10% admin fee */}
+                <fieldset className="mb-4">
+                  <legend className="block text-xs font-semibold text-slate-700 mb-1.5">Metode Pembayaran</legend>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: 'SALDO', Icon: Wallet, title: 'Saldo Akun', sub: user ? `Saldo ${formatRupiah(user.balance)}` : 'Login untuk memakai saldo' },
+                      { id: 'XENDIT', Icon: CreditCard, title: 'Xendit', sub: 'QRIS, VA, e-wallet · admin 10%' },
+                    ].map(({ id, Icon, title, sub }) => (
+                      <label
+                        key={id}
+                        className={`cursor-pointer rounded-xl border p-3 transition ${
+                          payMethod === id ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600' : 'border-slate-200 hover:border-blue-300'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="pay-method"
+                          value={id}
+                          checked={payMethod === id}
+                          onChange={() => setPayMethod(id)}
+                          className="sr-only"
+                        />
+                        <Icon className={`w-4 h-4 mb-1 ${payMethod === id ? 'text-blue-600' : 'text-slate-400'}`} />
+                        <div className="text-xs font-bold text-slate-900">{title}</div>
+                        <div className="text-[10px] text-slate-500 leading-snug">{sub}</div>
+                      </label>
+                    ))}
+                  </div>
+                  {payMethod === 'SALDO' && user && user.balance < subtotal && (
+                    <p className="text-[11px] text-amber-600 mt-1.5">Saldo kurang. Pilih Xendit atau top up saldo terlebih dahulu.</p>
+                  )}
+                </fieldset>
+
                 {/* Rincian Harga */}
                 <div className="border-t border-slate-200 pt-3 space-y-2 text-xs mb-6">
                   <div className="flex justify-between text-slate-600">
@@ -719,11 +892,15 @@ export default function HomePage() {
                       <span>-{formatRupiah(voucherDiscount)}</span>
                     </div>
                   )}
+                  {payMethod === 'XENDIT' && (
+                    <div className="flex justify-between text-slate-600">
+                      <span>Biaya Admin Xendit (10%):</span>
+                      <span>+{formatRupiah(xenditFee)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm font-bold text-slate-900 pt-2 border-t border-slate-200">
                     <span>Total Pembayaran:</span>
-                    <span className="text-blue-600 font-black">
-                      {formatRupiah(Math.max(0, (selectedProduct.isFlashSale ? selectedProduct.flashPrice : selectedProduct.price) - voucherDiscount))}
-                    </span>
+                    <span className="text-blue-600 font-black">{formatRupiah(payTotal)}</span>
                   </div>
                 </div>
 
@@ -737,10 +914,12 @@ export default function HomePage() {
                     {buying ? (
                       <>
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>Memproses Transaksi...</span>
+                        <span>{payMethod === 'XENDIT' ? 'Membuka halaman pembayaran...' : 'Memproses Transaksi...'}</span>
                       </>
+                    ) : payMethod === 'XENDIT' ? (
+                      'Lanjut Bayar via Xendit'
                     ) : (
-                      'Konfirmasi & Bayar Sekarang'
+                      'Konfirmasi & Bayar dengan Saldo'
                     )}
                   </button>
                   <button

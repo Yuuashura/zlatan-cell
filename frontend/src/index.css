@@ -65,10 +65,59 @@
   .page-enter > * > * { animation: none !important; }
 }
 
+/*
+ * Navbar active pill (Navbar.jsx). Moving right, the right edge leads and the left edge follows
+ * a beat later, so the pill stretches like a rubber band and snaps with a small overshoot.
+ */
+.nav-pill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 0.6rem;
+  background: linear-gradient(135deg, #eff6ff, #e0e7ff);
+  box-shadow: inset 0 0 0 1px rgb(191 219 254 / 0.8), 0 2px 8px -2px rgb(37 99 235 / 0.25);
+  transition:
+    right 0.38s cubic-bezier(0.34, 1.56, 0.64, 1),
+    left 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.08s,
+    opacity 0.2s ease;
+}
+.nav-pill-left {
+  transition:
+    left 0.38s cubic-bezier(0.34, 1.56, 0.64, 1),
+    right 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.08s,
+    opacity 0.2s ease;
+}
+.nav-pill-instant { transition: opacity 0.2s ease; }
+.nav-link:hover { transform: translateY(-1px); }
+.nav-link { transition-property: color, transform; }
+@media (prefers-reduced-motion: reduce) {
+  .nav-pill, .nav-pill-left { transition: opacity 0.2s ease; }
+  .nav-link:hover { transform: none; }
+}
+
+/* Thermal receipt (/struk/:id): 58 mm roll, about 32 characters per line */
+.receipt {
+  width: 58mm;
+  padding: 3mm;
+  background: #fff;
+  color: #000;
+  font: 11px/1.35 'Courier New', Courier, monospace;
+}
+.receipt .row { display: flex; justify-content: space-between; gap: 6px; }
+.receipt .row span:last-child { text-align: right; word-break: break-word; }
+.receipt hr { border: 0; border-top: 1px dashed #000; margin: 5px 0; }
+.receipt .center { text-align: center; }
+.receipt .title { font-weight: 700; white-space: pre-line; }
+.receipt .big { font-size: 14px; letter-spacing: 1px; }
+.receipt .token { font-size: 14px; font-weight: 700; text-align: center; margin: 2px 0 4px; }
+.receipt .small { font-size: 10px; }
+
 /* Print Styles */
 @media print {
+  @page { size: 58mm auto; margin: 0; }
   body {
     background-color: #ffffff !important;
     color: #000000 !important;
   }
+  .page-enter * { animation: none !important; }
 }
