@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
+import { useDialog } from '../components/DialogProvider';
 import { Flame, Plus, Trash2, ArrowLeft, Clock } from 'lucide-react';
 
 export default function AdminFlashSalePage() {
+  const { confirm, notify } = useDialog();
   const [flashSales, setFlashSales] = useState([]);
   const [products, setProducts] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -48,17 +50,17 @@ export default function AdminFlashSalePage() {
       setShowModal(false);
       loadData();
     } catch (err) {
-      alert('Gagal menyimpan Flash Sale: ' + (err.response?.data?.message || err.message));
+      notify(err.response?.data?.message || 'Gagal menyimpan flash sale.', { title: 'Gagal Menyimpan' });
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Hapus promo flash sale ini?')) return;
+    if (!(await confirm('Promo flash sale ini akan dihapus.', { title: 'Hapus Flash Sale', confirmText: 'Hapus', danger: true }))) return;
     try {
       await api.delete(`/admin/flash-sales/${id}`);
       loadData();
     } catch (err) {
-      alert('Gagal menghapus: ' + err.message);
+      notify(err.response?.data?.message || 'Gagal menghapus flash sale.', { title: 'Gagal Menghapus' });
     }
   };
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import api from '../api/client';
+import { useDialog } from '../components/DialogProvider';
 import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Bot, Plus, Trash2, MessageSquare, Send, Loader2, AlertTriangle } from 'lucide-react';
 
@@ -41,24 +42,22 @@ function Bubble({ role, content }) {
 }
 
 export default function AdminAiChatPage() {
+  const { confirm, notify } = useDialog();
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   const [sessions, setSessions] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [loadingSession, setLoadingSession] = useState(true);
+  const requestedId = useRef(null); // ignore a slow response for a session the admin already left
   const [error, setError] = useState(null);
   const [usage, setUsage] = useState(null);
-  const endRef = useRef(null);
+  const scrollBox = useRef(null); // only the message list scrolls, never the whole page
   const initStarted = useRef(false); // StrictMode runs effects twice in dev; create the first session once
 
   useEffect(() => {
-    if (user && user.role !== 'ROLE_ADMIN') {
-      navigate('/');
-      return;
-    }
     if (user && !initStarted.current) {
       initStarted.current = true;
       init();
@@ -66,7 +65,8 @@ export default function AdminAiChatPage() {
   }, [user]);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const box = scrollBox.current;
+    if (box) box.scrollTop = box.scrollHeight;
   }, [messages, sending]);
 
   const errorText = (err, fallback) => err.response?.data?.message || fallback;
@@ -83,6 +83,7 @@ export default function AdminAiChatPage() {
       setSessions(list);
       await selectSession(list[0].id);
     } catch (err) {
+      setLoadingSession(false);
       setError(errorText(err, 'Gagal memuat sesi chat.'));
     }
   };
@@ -97,14 +98,20 @@ export default function AdminAiChatPage() {
   };
 
   const selectSession = async (id) => {
+    requestedId.current = id;
     setActiveId(id);
     setError(null);
+    setLoadingSession(true);
     try {
       const res = await api.get(`/admin/ai/sessions/${id}/messages`);
-      setMessages(res.data);
+      if (requestedId.current === id) setMessages(res.data);
     } catch (err) {
-      setMessages([]);
-      setError(errorText(err, 'Gagal memuat pesan.'));
+      if (requestedId.current === id) {
+        setMessages([]);
+        setError(errorText(err, 'Gagal memuat pesan.'));
+      }
+    } finally {
+      if (requestedId.current === id) setLoadingSession(false);
     }
   };
 
@@ -112,8 +119,10 @@ export default function AdminAiChatPage() {
     try {
       const res = await api.post('/admin/ai/sessions');
       setSessions((prev) => [res.data, ...prev]);
+      requestedId.current = res.data.id;
       setActiveId(res.data.id);
       setMessages([]);
+      setLoadingSession(false);
       setError(null);
       return res.data.id;
     } catch (err) {
@@ -124,7 +133,7 @@ export default function AdminAiChatPage() {
 
   const deleteSession = async (id, e) => {
     e.stopPropagation();
-    if (!window.confirm('Hapus sesi ini beserta seluruh pesannya?')) return;
+    if (!(await confirm('Sesi ini beserta seluruh pesannya akan dihapus permanen.', { title: 'Hapus Sesi', confirmText: 'Hapus', danger: true }))) return;
     try {
       await api.delete(`/admin/ai/sessions/${id}`);
       const remaining = sessions.filter((s) => s.id !== id);
@@ -139,7 +148,7 @@ export default function AdminAiChatPage() {
   };
 
   const deleteAll = async () => {
-    if (!window.confirm('Hapus SEMUA sesi dan riwayat chat? Tindakan ini tidak bisa dibatalkan.')) return;
+    if (!(await confirm('Semua sesi dan riwayat chat akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.', { title: 'Hapus Semua Riwayat', confirmText: 'Hapus Semua', danger: true }))) return;
     try {
       await api.delete('/admin/ai/sessions');
       setSessions([]);
@@ -232,7 +241,8 @@ export default function AdminAiChatPage() {
                 <button
                   onClick={(e) => deleteSession(s.id, e)}
                   title="Hapus sesi"
-                  className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-600 transition"
+                  aria-label={`Hapus sesi ${s.title}`}
+                  className="p-1 rounded-lg text-slate-300 group-hover:text-slate-400 hover:!text-rose-600 hover:bg-rose-50 transition"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -251,8 +261,14 @@ export default function AdminAiChatPage() {
 
         {/* Percakapan */}
         <section className="flex-1 bg-white rounded-3xl border border-slate-200 shadow-xs flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-4 bg-slate-50/60">
-            {messages.length === 0 && !sending && (
+          <div ref={scrollBox} className="flex-1 overflow-y-auto p-4 bg-slate-50/60">
+            {loadingSession && (
+              <div role="status" className="h-full flex flex-col items-center justify-center gap-2 text-xs text-slate-400">
+                <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
+                Memuat percakapan...
+              </div>
+            )}
+            {!loadingSession && messages.length === 0 && !sending && (
               <>
                 <Bubble role="AI" content={GREETING} />
                 <div className="flex flex-wrap gap-2 mt-2">
@@ -268,7 +284,7 @@ export default function AdminAiChatPage() {
                 </div>
               </>
             )}
-            {messages.map((m) => (
+            {!loadingSession && messages.map((m) => (
               <Bubble key={m.id} role={m.role} content={m.content} />
             ))}
             {sending && (
@@ -278,7 +294,6 @@ export default function AdminAiChatPage() {
                 </div>
               </div>
             )}
-            <div ref={endRef} />
           </div>
 
           {error && (
@@ -292,13 +307,13 @@ export default function AdminAiChatPage() {
               onKeyDown={onKeyDown}
               rows={1}
               maxLength={1000}
-              disabled={sending}
+              disabled={sending || loadingSession}
               placeholder="Tulis pertanyaan, misalnya: berapa omset hari ini?"
               className="flex-1 resize-none border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
             />
             <button
               onClick={() => send()}
-              disabled={sending || !input.trim()}
+              disabled={sending || loadingSession || !input.trim()}
               title="Kirim"
               className="p-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white transition"
             >

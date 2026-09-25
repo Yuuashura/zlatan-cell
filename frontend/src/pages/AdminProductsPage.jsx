@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
+import { useDialog } from '../components/DialogProvider';
 import { Package, Plus, Trash2, Edit3, Search, AlertCircle, ArrowLeft } from 'lucide-react';
 
 export default function AdminProductsPage() {
+  const { confirm, notify } = useDialog();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [providers, setProviders] = useState([]);
@@ -61,17 +63,17 @@ export default function AdminProductsPage() {
       setShowModal(false);
       loadData();
     } catch (err) {
-      alert('Gagal menyimpan produk: ' + (err.response?.data?.message || err.message));
+      notify(err.response?.data?.message || 'Gagal menyimpan produk.', { title: 'Gagal Menyimpan' });
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Yakin ingin menghapus produk ini?')) return;
+    if (!(await confirm('Produk ini akan dihapus dari katalog.', { title: 'Hapus Produk', confirmText: 'Hapus', danger: true }))) return;
     try {
       await api.delete(`/admin/products/${id}`);
       loadData();
     } catch (err) {
-      alert('Gagal menghapus produk: ' + err.message);
+      notify(err.response?.data?.message || 'Gagal menghapus produk. Produk yang sudah pernah dibeli tidak bisa dihapus.', { title: 'Gagal Menghapus' });
     }
   };
 

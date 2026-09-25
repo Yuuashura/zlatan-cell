@@ -1,21 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
-import { Users, Shield, ArrowLeft, Ban, CheckCircle2 } from 'lucide-react';
+import { useDialog } from '../components/DialogProvider';
+import { Users, ArrowLeft, Ban, CheckCircle2, Search } from 'lucide-react';
+import Pager from '../components/Pager';
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState([]);
+  const { confirm, notify } = useDialog();
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [page, appliedSearch]);
+
+  const users = data?.items || [];
 
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/admin/users');
-      setUsers(res.data);
+      const res = await api.get('/admin/users', { params: { page, size: 20, search: appliedSearch || undefined } });
+      setData(res.data);
     } catch (err) {
       console.error('Failed to load users', err);
     } finally {
@@ -24,14 +32,18 @@ export default function AdminUsersPage() {
   };
 
   const handleToggleBan = async (id, currentStatus) => {
-    const action = currentStatus === 'ACTIVE' ? 'menonaktifkan (banned)' : 'mengaktifkan kembali';
-    if (!window.confirm(`Yakin ingin ${action} akun pengguna ini?`)) return;
+    const banning = currentStatus === 'ACTIVE';
+    const ok = await confirm(
+      banning ? 'Pengguna ini tidak akan bisa login sampai diaktifkan kembali.' : 'Pengguna ini akan bisa login kembali.',
+      { title: banning ? 'Blokir Akun' : 'Aktifkan Akun', confirmText: banning ? 'Blokir' : 'Aktifkan', danger: banning }
+    );
+    if (!ok) return;
 
     try {
       await api.post(`/admin/users/${id}/toggle-ban`);
       loadUsers();
     } catch (err) {
-      alert('Gagal mengubah status: ' + err.message);
+      notify(err.response?.data?.message || 'Gagal mengubah status akun.', { title: 'Gagal' });
     }
   };
 
@@ -51,6 +63,23 @@ export default function AdminUsersPage() {
           </h1>
           <p className="text-xs text-slate-500">Kelola akun pelanggan, hak akses, dan status pemblokiran</p>
         </div>
+        <div className="relative w-64">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          <input
+            type="text"
+            aria-label="Cari pengguna"
+            placeholder="Cari username / email / HP, Enter"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                setPage(0);
+                setAppliedSearch(searchTerm.trim());
+              }
+            }}
+            className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
       </div>
 
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
@@ -66,6 +95,11 @@ export default function AdminUsersPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
+            {!loading && users.length === 0 && (
+              <tr>
+                <td colSpan="6" className="py-10 text-center text-slate-400">Tidak ada pengguna yang cocok.</td>
+              </tr>
+            )}
             {users.map((u) => (
               <tr key={u.id} className="hover:bg-slate-50/80">
                 <td className="py-3.5 px-4 font-bold text-slate-900">{u.username}</td>
@@ -112,6 +146,7 @@ export default function AdminUsersPage() {
           </tbody>
         </table>
       </div>
+      <Pager page={page} totalPages={data?.totalPages} onChange={setPage} />
     </div>
   );
 }

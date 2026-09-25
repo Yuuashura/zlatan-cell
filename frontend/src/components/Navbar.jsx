@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ShoppingBag, Zap, Wallet, User, LogOut, LayoutDashboard, Loader2 } from 'lucide-react';
+import { ShoppingBag, Zap, Wallet, User, LogOut, LayoutDashboard, Loader2, Star } from 'lucide-react';
 
 export default function Navbar() {
   const { user, loading, logout } = useAuth();
@@ -41,6 +41,9 @@ export default function Navbar() {
             </Link>
             <Link to="/topup" className="hover:text-blue-600 transition flex items-center gap-1.5">
               <Wallet className="w-4 h-4" /> Top Up Saldo
+            </Link>
+            <Link to="/ulasan" className="hover:text-blue-600 transition flex items-center gap-1.5">
+              <Star className="w-4 h-4" /> Ulasan
             </Link>
             {user && (
               <Link to="/profile" className="hover:text-blue-600 transition flex items-center gap-1.5">

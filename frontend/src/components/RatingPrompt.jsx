@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { Star, X, Loader2, Heart } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { X, Loader2, Heart } from 'lucide-react';
+import { StarInput } from './Stars';
 
 // SKPL-F21 (usulan): popup "Nilai Kami". Muncul untuk pelanggan dengan minimal 2 transaksi
 // berhasil yang belum pernah menilai. Syarat itu diperiksa server (/api/ratings/me);
 // "Nanti saja" menunda popup selama 3 hari di perangkat ini.
 const SNOOZE_MS = 3 * 24 * 60 * 60 * 1000;
 const MAX_COMMENT = 500;
-const LABELS = ['', 'Sangat kecewa', 'Kurang puas', 'Cukup', 'Puas', 'Sangat puas'];
 
 /**
  * @param checkKey  ubah nilainya (misalnya setelah pembelian berhasil) untuk memeriksa ulang
@@ -18,7 +19,6 @@ export default function RatingPrompt({ checkKey, suppressed }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState(0);
-  const [hover, setHover] = useState(0);
   const [comment, setComment] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
@@ -53,7 +53,7 @@ export default function RatingPrompt({ checkKey, suppressed }) {
     try {
       await api.post('/ratings', { rating, comment });
       setDone(true);
-      setTimeout(() => setOpen(false), 1800);
+      setTimeout(() => setOpen(false), 4000);
     } catch (err) {
       setError(err.response?.data?.message || 'Gagal mengirim penilaian.');
     } finally {
@@ -73,6 +73,9 @@ export default function RatingPrompt({ checkKey, suppressed }) {
             <Heart className="w-12 h-12 mx-auto text-rose-500 fill-rose-500 mb-3" />
             <h2 className="text-lg font-black text-slate-900">Terima kasih!</h2>
             <p className="text-xs text-slate-500">Penilaianmu membantu Zelatan Cell melayani lebih baik.</p>
+            <Link to="/ulasan" onClick={() => setOpen(false)} className="inline-block mt-3 text-xs font-semibold text-blue-600 hover:underline">
+              Lihat semua ulasan
+            </Link>
           </div>
         ) : (
           <>
@@ -81,21 +84,9 @@ export default function RatingPrompt({ checkKey, suppressed }) {
               Seberapa puas kamu berbelanja di Zelatan Cell? Penilaianmu bisa diubah kapan saja.
             </p>
 
-            <div className="flex justify-center gap-1.5 mb-1" onMouseLeave={() => setHover(0)}>
-              {[1, 2, 3, 4, 5].map((i) => (
-                <button
-                  key={i}
-                  type="button"
-                  aria-label={`${i} bintang`}
-                  onClick={() => setRating(i)}
-                  onMouseEnter={() => setHover(i)}
-                  className="p-1 transition hover:scale-110"
-                >
-                  <Star className={`w-9 h-9 ${i <= (hover || rating) ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} />
-                </button>
-              ))}
+            <div className="mb-4">
+              <StarInput value={rating} onChange={setRating} />
             </div>
-            <p className="text-center text-xs font-semibold text-amber-600 h-4 mb-4">{LABELS[hover || rating]}</p>
 
             <label htmlFor="rating-comment" className="text-xs font-semibold text-slate-600">
               Komentar (opsional)

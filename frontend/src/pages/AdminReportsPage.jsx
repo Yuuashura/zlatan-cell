@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
+import Pager from '../components/Pager';
 import { FileText, Printer, Download, Search, ArrowLeft, Calendar, DollarSign, TrendingUp, ShoppingCart } from 'lucide-react';
 import { TableRowSkeleton } from '../components/Skeletons';
 
@@ -216,27 +217,7 @@ export default function AdminReportsPage() {
         </div>
       </div>
 
-      {data?.totalPages > 1 && (
-        <div className="flex justify-center items-center gap-3 mt-6 text-xs">
-          <button
-            disabled={page === 0}
-            onClick={() => setPage(page - 1)}
-            className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white disabled:opacity-40"
-          >
-            Sebelumnya
-          </button>
-          <span className="text-slate-500">
-            Halaman {page + 1} dari {data.totalPages}
-          </span>
-          <button
-            disabled={page + 1 >= data.totalPages}
-            onClick={() => setPage(page + 1)}
-            className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white disabled:opacity-40"
-          >
-            Berikutnya
-          </button>
-        </div>
-      )}
+      <Pager page={page} totalPages={data?.totalPages} onChange={setPage} />
     </div>
   );
 }

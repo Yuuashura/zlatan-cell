@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
+import { useDialog } from '../components/DialogProvider';
 import { Tag, Plus, Trash2, ArrowLeft, Clock, Percent, DollarSign, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { TableRowSkeleton } from '../components/Skeletons';
 
 export default function AdminVouchersPage() {
+  const { confirm, notify } = useDialog();
   const [vouchers, setVouchers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -56,17 +58,17 @@ export default function AdminVouchersPage() {
       resetForm();
       loadVouchers();
     } catch (err) {
-      alert('Gagal menyimpan voucher: ' + (err.response?.data?.message || err.message));
+      notify(err.response?.data?.message || 'Gagal menyimpan voucher.', { title: 'Gagal Menyimpan' });
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Hapus voucher ini?')) return;
+    if (!(await confirm('Voucher ini akan dihapus.', { title: 'Hapus Voucher', confirmText: 'Hapus', danger: true }))) return;
     try {
       await api.delete(`/admin/vouchers/${id}`);
       loadVouchers();
     } catch (err) {
-      alert('Gagal menghapus voucher: ' + err.message);
+      notify(err.response?.data?.message || 'Gagal menghapus voucher.', { title: 'Gagal Menghapus' });
     }
   };
 

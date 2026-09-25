@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -37,17 +37,12 @@ ChartJS.register(
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   const [summary, setSummary] = useState(null);
   const [charts, setCharts] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user && user.role !== 'ROLE_ADMIN') {
-      navigate('/');
-      return;
-    }
     loadDashboard();
   }, [user]);
 
@@ -359,6 +354,17 @@ export default function AdminDashboardPage() {
           <div>
             <div className="font-bold text-slate-900 text-sm">Data Pengguna</div>
             <div className="text-[11px] text-slate-400">Kelola akun & status</div>
+          </div>
+          <ArrowUpRight className="w-4 h-4 text-slate-400" />
+        </Link>
+
+        <Link
+          to="/admin/catalog"
+          className="p-5 bg-white rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-md transition flex items-center justify-between"
+        >
+          <div>
+            <div className="font-bold text-slate-900 text-sm">Kategori &amp; Provider</div>
+            <div className="text-[11px] text-slate-400">Data master produk</div>
           </div>
           <ArrowUpRight className="w-4 h-4 text-slate-400" />
         </Link>

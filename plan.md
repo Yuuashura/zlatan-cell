@@ -1,7 +1,17 @@
 # Plan Pengembangan Lanjutan — Zelatan Cell
 
 Disusun 25 September 2026, setelah penelaahan kode `backend/` dan `frontend/`.
-Dokumen ini untuk **dibahas dulu** sebelum ada kode yang diubah.
+
+> **Status pelaksanaan (25 Sep 2026, sore)**
+> - Fase 0 ✅ kecuali git: database di Projek-hanif (role `zelatan_app`), RLS + index FK, kredensial keluar dari `application.properties`. Memindah `.git` ke `Aplikasi/` dan commit awal **belum** (ditolak sistem izin, perlu dilakukan manual).
+> - Fase 1 ✅ semua poin, teruji.
+> - Fase 2 ✅ rating, teruji di browser.
+> - Fase 3 ✅ kecuali uji dengan model sungguhan (menunggu `OPENROUTER_API_KEY`).
+> - Fase 4 ✅ F15, F16, F17, F18, F19, voucher per pelanggan, F03, halaman kategori/provider dan edit profil, kode mati dihapus, build React disalin ke `static/`.
+> - Fase 5 (backlog) belum dikerjakan; tunggu persetujuan pembimbing.
+> - Hasil uji rinci: `backend/docs/CHECKLIST-PROGRES.md` bagian "Hasil uji 25 Sep 2026".
+>
+> Keputusan yang dipakai: default K1–K9 di bawah, dengan K5/K6 mengikuti OpenRouter + sesi tersimpan.
 
 Isi:
 

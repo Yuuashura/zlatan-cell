@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Zap, Lock, User, ArrowRight, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
 
   const [username, setUsername] = useState('');
@@ -25,8 +26,10 @@ export default function LoginPage() {
 
     try {
       const data = await login(username, password);
+      // Back to the page that sent the visitor here (AdminRoute), otherwise the role's home.
+      const from = location.state?.from;
       if (data.role === 'ROLE_ADMIN') {
-        navigate('/admin');
+        navigate(from?.startsWith('/admin') ? from : '/admin');
       } else {
         navigate('/');
       }

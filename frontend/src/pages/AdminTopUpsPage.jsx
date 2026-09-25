@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import api from '../api/client';
+import { useDialog } from '../components/DialogProvider';
 import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Wallet, CheckCircle2, XCircle } from 'lucide-react';
+import Pager from '../components/Pager';
 
 // Verifikasi top up manual (v1) dan pemantauan top up Xendit (SKPL-F05).
 // Top up manual tidak lagi disetujui otomatis: saldo baru bertambah setelah admin menekan Setujui.
@@ -13,26 +15,23 @@ const STATUS_STYLE = {
 };
 
 export default function AdminTopUpsPage() {
+  const { confirm, notify } = useDialog();
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const [rows, setRows] = useState([]);
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('PENDING');
+  const [page, setPage] = useState(0);
   const [busyId, setBusyId] = useState(null);
 
   useEffect(() => {
-    if (user && user.role !== 'ROLE_ADMIN') {
-      navigate('/');
-      return;
-    }
     if (user) load();
-  }, [user]);
+  }, [user, filter, page]);
 
   const load = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/admin/topups');
-      setRows(res.data);
+      const res = await api.get('/admin/topups', { params: { status: filter, page, size: 20 } });
+      setData(res.data);
     } catch (err) {
       console.error('Failed to load top ups', err);
     } finally {
@@ -41,14 +40,18 @@ export default function AdminTopUpsPage() {
   };
 
   const act = async (id, action) => {
-    const label = action === 'approve' ? 'menyetujui dan menambah saldo' : 'menolak';
-    if (!window.confirm(`Yakin ${label} untuk top up #${id}?`)) return;
+    const approve = action === 'approve';
+    const ok = await confirm(
+      approve ? `Saldo pelanggan akan bertambah sesuai nominal top up #${id}.` : `Top up #${id} akan ditolak.`,
+      { title: approve ? 'Setujui Top Up' : 'Tolak Top Up', confirmText: approve ? 'Setujui' : 'Tolak', danger: !approve }
+    );
+    if (!ok) return;
     try {
       setBusyId(id);
       await api.post(`/admin/topups/${id}/${action}`);
       await load();
     } catch (err) {
-      alert(err.response?.data?.message || 'Gagal memproses top up.');
+      notify(err.response?.data?.message || 'Gagal memproses top up.', { title: 'Gagal' });
     } finally {
       setBusyId(null);
     }
@@ -59,8 +62,8 @@ export default function AdminTopUpsPage() {
   const formatDate = (val) =>
     val ? new Date(val).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '-';
 
-  const shown = filter === 'ALL' ? rows : rows.filter((r) => r.status === filter);
-  const pendingManual = rows.filter((r) => r.status === 'PENDING' && r.method === 'MANUAL').length;
+  const shown = data?.items || [];
+  const pendingManual = data?.pendingManual || 0;
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -80,7 +83,10 @@ export default function AdminTopUpsPage() {
           {['PENDING', 'SUCCESS', 'FAILED', 'ALL'].map((f) => (
             <button
               key={f}
-              onClick={() => setFilter(f)}
+              onClick={() => {
+                setPage(0);
+                setFilter(f);
+              }}
               className={`px-3 py-1.5 rounded-lg transition ${filter === f ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-50'}`}
             >
               {f === 'ALL' ? 'Semua' : f}
@@ -154,6 +160,7 @@ export default function AdminTopUpsPage() {
           </tbody>
         </table>
       </div>
+      <Pager page={page} totalPages={data?.totalPages} onChange={setPage} />
     </div>
   );
 }
