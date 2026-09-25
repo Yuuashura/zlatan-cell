@@ -121,7 +121,7 @@ export default function AdminReportsPage() {
           <input
             type="text"
             aria-label="Cari transaksi"
-            placeholder="Cari ID / pelanggan / produk, Enter"
+            placeholder="Cari ID / pelanggan / nomor / produk, Enter"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && applySearch()}
@@ -194,7 +194,10 @@ export default function AdminReportsPage() {
                       {new Date(r.timestamp).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </td>
                     <td className="py-3 px-3 font-mono font-bold text-slate-800 whitespace-nowrap">{r.transactionId}</td>
-                    <td className="py-3 px-3 text-slate-700">{r.customer}</td>
+                    <td className="py-3 px-3 text-slate-700">
+                      {r.customer}
+                      {r.customerNumber && <div className="text-[10px] font-mono text-slate-400">{r.customerNumber}</div>}
+                    </td>
                     <td className="py-3 px-3 font-semibold text-slate-900">{r.productName}</td>
                     <td className="py-3 px-3 text-slate-500">{r.voucherCode || '-'}</td>
                     <td className="py-3 px-3 text-slate-500">{formatRupiah(r.costPrice)}</td>

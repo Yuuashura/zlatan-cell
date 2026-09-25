@@ -13,6 +13,7 @@ import {
   CircularSpinner 
 } from '../components/Skeletons';
 import RatingPrompt from '../components/RatingPrompt';
+import { TARGETS, formatCode } from '../purchaseTarget';
 
 export default function HomePage() {
   const { user, loading: authLoading, refreshUser } = useAuth();
@@ -31,6 +32,7 @@ export default function HomePage() {
 
   // Checkout modal states
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [customerNumber, setCustomerNumber] = useState('');
   const [voucherCode, setVoucherCode] = useState('');
   const [appliedVoucher, setAppliedVoucher] = useState(null);
   const [voucherDiscount, setVoucherDiscount] = useState(0);
@@ -138,6 +140,7 @@ export default function HomePage() {
       const res = await api.post('/transactions/buy', {
         productId: selectedProduct.id,
         voucherCode: voucherDiscount > 0 ? voucherCode.trim() : null,
+        customerNumber: selectedProduct.target ? customerNumber.trim() : null,
       });
       setPurchaseResult({ success: true, data: res.data });
       setRatingCheck((n) => n + 1);
@@ -155,6 +158,8 @@ export default function HomePage() {
 
   const openCheckout = (p, defaultVoucherCode = null) => {
     setSelectedProduct(p);
+    // pulsa/kuota usually goes to the buyer's own number; PLN meter must be typed
+    setCustomerNumber(p.target === 'PHONE' ? user?.phoneNumber || '' : '');
     setVoucherCode(defaultVoucherCode || '');
     setAppliedVoucher(null);
     setVoucherDiscount(0);
@@ -584,9 +589,17 @@ export default function HomePage() {
                         <span>ID Transaksi:</span>
                         <span className="font-mono font-bold text-slate-900">{purchaseResult.data?.transactionId}</span>
                       </div>
+                      {purchaseResult.data?.target && (
+                        <div className="flex justify-between text-slate-600">
+                          <span>{TARGETS[purchaseResult.data.target].label}:</span>
+                          <span className="font-mono font-bold text-slate-900">{purchaseResult.data.customerNumber}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between text-slate-600">
-                        <span>Serial Number (SN):</span>
-                        <span className="font-mono font-bold text-blue-600">{purchaseResult.data?.serialNumber}</span>
+                        <span>{TARGETS[purchaseResult.data?.target]?.codeLabel || 'Serial Number (SN)'}:</span>
+                        <span className="font-mono font-bold text-blue-600">
+                          {formatCode(purchaseResult.data?.serialNumber, purchaseResult.data?.target)}
+                        </span>
                       </div>
                       <div className="flex justify-between text-slate-600">
                         <span>Total Bayar:</span>
@@ -640,6 +653,26 @@ export default function HomePage() {
                   <div className="text-xs text-slate-500 mt-1">{selectedProduct.description}</div>
                   <div className="text-[11px] text-slate-400 mt-1">Stok saat ini: <span className="font-bold text-slate-700">{selectedProduct.stock} item</span></div>
                 </div>
+
+                {/* Destination number: phone for pulsa/kuota, meter for PLN */}
+                {TARGETS[selectedProduct.target] && (
+                  <div className="mb-4">
+                    <label htmlFor="customer-number" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      {TARGETS[selectedProduct.target].label}
+                    </label>
+                    <input
+                      id="customer-number"
+                      type="tel"
+                      inputMode="numeric"
+                      autoComplete={selectedProduct.target === 'PHONE' ? 'tel' : 'off'}
+                      placeholder={TARGETS[selectedProduct.target].placeholder}
+                      value={customerNumber}
+                      onChange={(e) => setCustomerNumber(e.target.value.replace(/[^\d+]/g, '').slice(0, 16))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono tracking-wide focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">{TARGETS[selectedProduct.target].hint}</p>
+                  </div>
+                )}
 
                 {/* Voucher input */}
                 <div className="mb-4">
@@ -697,7 +730,7 @@ export default function HomePage() {
                 {/* Confirm Buttons */}
                 <div className="space-y-2">
                   <button
-                    disabled={buying}
+                    disabled={buying || (!!TARGETS[selectedProduct.target] && !customerNumber.trim())}
                     onClick={handleConfirmPurchase}
                     className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-500/20 transition disabled:opacity-50 flex items-center justify-center gap-2"
                   >

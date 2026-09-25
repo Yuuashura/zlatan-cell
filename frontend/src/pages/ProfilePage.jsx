@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { User, Wallet, Phone, Calendar, ShoppingBag, ArrowUpRight, Search, CheckCircle2, XCircle } from 'lucide-react';
 import { TableRowSkeleton } from '../components/Skeletons';
 import EditProfileForm from '../components/EditProfileForm';
+import { formatCode } from '../purchaseTarget';
 
 export default function ProfilePage() {
   const { user, loading: authLoading } = useAuth();
@@ -45,7 +46,8 @@ export default function ProfilePage() {
     return (
       (t.transactionId && t.transactionId.toLowerCase().includes(s)) ||
       (t.productName && t.productName.toLowerCase().includes(s)) ||
-      (t.serialNumber && t.serialNumber.toLowerCase().includes(s))
+      (t.serialNumber && t.serialNumber.toLowerCase().includes(s)) ||
+      (t.customerNumber && t.customerNumber.includes(s))
     );
   });
 
@@ -107,7 +109,7 @@ export default function ProfilePage() {
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <ShoppingBag className="w-5 h-5 text-blue-600" /> Riwayat Pembelian Produk
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">Daftar transaksi digital dan Serial Number (SN) voucher pulsa Anda</p>
+            <p className="text-xs text-slate-500 mt-0.5">Daftar transaksi, nomor tujuan, dan SN / token listrik Anda</p>
           </div>
 
           <div className="relative w-full sm:w-64">
@@ -129,7 +131,7 @@ export default function ProfilePage() {
                 <th className="py-3 px-3">Tanggal</th>
                 <th className="py-3 px-3">ID Transaksi</th>
                 <th className="py-3 px-3">Produk</th>
-                <th className="py-3 px-3">Serial Number (SN)</th>
+                <th className="py-3 px-3">SN / Token</th>
                 <th className="py-3 px-3">Total Bayar</th>
                 <th className="py-3 px-3 text-center">Status</th>
               </tr>
@@ -153,9 +155,12 @@ export default function ProfilePage() {
                     </td>
                     <td className="py-3.5 px-3 font-semibold text-slate-900">
                       {t.productName}
+                      {t.target && t.customerNumber && (
+                        <div className="text-[11px] font-mono font-normal text-slate-400">ke {t.customerNumber}</div>
+                      )}
                     </td>
-                    <td className="py-3.5 px-3 font-mono text-blue-600 font-bold bg-blue-50/50 rounded px-2">
-                      {t.serialNumber || '-'}
+                    <td className="py-3.5 px-3 font-mono text-blue-600 font-bold bg-blue-50/50 rounded px-2 whitespace-nowrap">
+                      {formatCode(t.serialNumber, t.target) || '-'}
                     </td>
                     <td className="py-3.5 px-3 font-bold text-slate-900 whitespace-nowrap">
                       {formatRupiah(t.amountPaid)}
