@@ -26,15 +26,15 @@ Pastikan branch `production` sudah di-push ke repositori GitHub:
 git push -u origin production
 ```
 
-### Langkah 2: Buat Application di Dokploy
+### Langkah 2: Buat Application / Compose di Dokploy
 1. Buka dashboard Dokploy di browser Anda (`https://dokploy.vps-anda.com`).
-2. Masuk ke Project Anda, lalu klik **Create Application**.
+2. Masuk ke Project Anda, lalu klik **Create Service** (pilih **Compose** atau **Application**).
 3. Beri nama aplikasi, misalnya: `zelatan-cell`.
 4. Pada tab **General / Source**:
    - **Source Type:** GitHub
-   - **Repository:** `HanifFauzan-n/zlatancell-thesis`
-   - **Branch:** `production`
-   - **Build Type:** `Dockerfile`
+   - **Repository:** `Yuuashura/zlatan-cell`
+   - **Branch:** `main`
+   - **Build Type:** `Compose` (menggunakan `docker-compose.yml`) atau `Dockerfile`
    - **Dockerfile Path:** `/Dockerfile`
    - **Context Path:** `/`
 
@@ -105,7 +105,7 @@ Anda memiliki 2 cara mudah di Dokploy:
 
 ### Opsi 1: Dokploy Compose (Direkomendasikan Jika Ingin Ngrok Otomatis Jalan di VPS)
 1. Di Dokploy, pilih **Create Service** > **Compose**.
-2. Hubungkan ke GitHub repo `HanifFauzan-n/zlatancell-thesis`, pilih branch `production`.
+2. Hubungkan ke GitHub repo `Yuuashura/zlatan-cell`, pilih branch `main`.
 3. Dokploy akan membaca `docker-compose.yml` yang menjalankan container `app` (Spring Boot + React) dan container `ngrok` secara berdampingan.
 4. Ngrok akan otomatis membuat tunnel ke `https://stinging-usual-risotto.ngrok-free.dev` 24/7!
 
