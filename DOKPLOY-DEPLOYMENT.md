@@ -63,36 +63,56 @@ git push -u origin production
 
 ---
 
-## 3. Konfigurasi Webhook Xendit (Tanpa Ngrok)
+## 3. Konfigurasi Webhook Xendit & Ngrok
 
-Karena aplikasi Anda sudah aktif di domain publik VPS dengan HTTPS, **ngrok TIDAK PERLU digunakan lagi**.
+Karena Anda menggunakan domain statis Ngrok (`https://stinging-usual-risotto.ngrok-free.dev`), tunnel ini dapat berjalan secara otomatis melalui container Docker maupun langsung diakses Xendit tanpa perlu membeli domain kustom!
 
 1. Buka [Dashboard Xendit](https://dashboard.xendit.co).
 2. Masuk ke menu **Settings** > **Developers** > **Webhooks**.
 3. Di bagian **Webhook URL**:
-   - Pilih event: **Invoice paid** (atau Invoice created/expired/paid).
-   - Masukkan URL webhook VPS Anda:
+   - Pilih event: **Invoice paid** (dan invoice expired/created).
+   - Masukkan URL webhook publik Ngrok Anda:
      ```
-     https://<domain-anda.com>/api/xendit/callback
+     https://stinging-usual-risotto.ngrok-free.dev/api/xendit/callback
      ```
 4. Di bagian **Verification token**:
    - Salin token verifikasi yang tertera di dashboard Xendit.
    - Tempel (*paste*) nilai token tersebut ke variabel **`XENDIT_CALLBACK_TOKEN`** di tab Environment Dokploy.
 5. Klik **Save Changes** / **Test Webhook**.
-   - Jika dites, response status yang dikembalikan aplikasi adalah **200 OK**.
+   - Respon yang dikembalikan aplikasi adalah **200 OK**.
 
 ---
 
 ## 4. Konfigurasi Redirect Payment (Kembali ke Website Setelah Bayar)
 
-Alur redirect sudah tertanam otomatis di aplikasi:
-- Top Up Saldo: setelah bayar, Xendit otomatis me-redirect ke `${APP_URL}/topup/status/{externalId}`
-- Beli Produk: setelah bayar, Xendit otomatis me-redirect ke `${APP_URL}/pesanan/{externalId}`
+Alur redirect sudah tertanam otomatis di aplikasi menggunakan variabel `APP_URL`:
+- **Top Up Saldo:** setelah bayar di Xendit, pelanggan otomatis diarahkan kembali ke:
+  `https://stinging-usual-risotto.ngrok-free.dev/topup/status/{externalId}`
+- **Beli Produk Langsung:** setelah bayar, pelanggan diarahkan kembali ke:
+  `https://stinging-usual-risotto.ngrok-free.dev/pesanan/{externalId}`
 
-Pastikan variabel `APP_URL` di Dokploy sudah memakai URL HTTPS lengkap (tanpa garis miring di akhir):
+Pastikan variabel `APP_URL` dan `APP_BASE_URL` di Dokploy diset:
 ```env
-APP_URL=https://domain-anda.com
+APP_BASE_URL=https://stinging-usual-risotto.ngrok-free.dev
+APP_URL=https://stinging-usual-risotto.ngrok-free.dev
 ```
+
+---
+
+## 5. Menjalankan via Dokploy (Compose vs Application)
+
+Anda memiliki 2 cara mudah di Dokploy:
+
+### Opsi 1: Dokploy Compose (Direkomendasikan Jika Ingin Ngrok Otomatis Jalan di VPS)
+1. Di Dokploy, pilih **Create Service** > **Compose**.
+2. Hubungkan ke GitHub repo `HanifFauzan-n/zlatancell-thesis`, pilih branch `production`.
+3. Dokploy akan membaca `docker-compose.yml` yang menjalankan container `app` (Spring Boot + React) dan container `ngrok` secara berdampingan.
+4. Ngrok akan otomatis membuat tunnel ke `https://stinging-usual-risotto.ngrok-free.dev` 24/7!
+
+### Opsi 2: Dokploy Application (Single Container)
+1. Di Dokploy, pilih **Create Application**.
+2. Pilih Build Type **Dockerfile** (port 8080).
+3. Jika VPS Anda sudah punya domain atau ingin di-tunnel manual, cukup masukkan domain di menu Domains Dokploy.
 
 ---
 
