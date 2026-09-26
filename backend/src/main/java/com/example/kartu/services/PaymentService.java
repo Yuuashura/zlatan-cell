@@ -73,7 +73,8 @@ public class PaymentService {
         String externalId = xenditService.buildExternalId(topUp.getId().longValue());
         topUp.setExternalId(externalId);
 
-        String returnUrl = frontendUrl + "/topup/status/" + externalId;
+        String base = frontendUrl != null ? frontendUrl.replaceAll("/+$", "") : "";
+        String returnUrl = base + "/topup/status/" + externalId;
         String payerEmail = user.getEmail() != null && !user.getEmail().isBlank() ? user.getEmail() : null;
         XenditInvoiceResponse invoice = xenditService.createInvoice(
                 externalId,

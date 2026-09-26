@@ -86,7 +86,8 @@ public class OrderService {
         order.setTotal(price + order.getAdminFee());
         orderRepository.save(order);
 
-        String returnUrl = frontendUrl + "/pesanan/" + order.getExternalId();
+        String base = frontendUrl != null ? frontendUrl.replaceAll("/+$", "") : "";
+        String returnUrl = base + "/pesanan/" + order.getExternalId();
         XenditInvoiceResponse invoice = xenditService.createInvoice(
                 order.getExternalId(),
                 BigDecimal.valueOf(order.getTotal()),

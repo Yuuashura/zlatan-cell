@@ -66,14 +66,32 @@ public class DataSeed implements CommandLineRunner {
             admin.setBalance(0);
 
             userRepository.save(admin);
-            log.info("Admin 'Hanif18' created successfully.");
+            log.info("Admin '{}' created successfully.", adminUsername);
         } else {
             User admin = adminOpt.get();
+            boolean changed = false;
+
+            if (adminPassword != null && !adminPassword.isBlank() && !passwordEncoder.matches(adminPassword, admin.getPassword())) {
+                admin.setPassword(passwordEncoder.encode(adminPassword));
+                changed = true;
+                log.info("Admin '{}' password synchronized with configuration.", adminUsername);
+            }
+
+            if (!"ROLE_ADMIN".equals(admin.getRole())) {
+                admin.setRole("ROLE_ADMIN");
+                changed = true;
+                log.info("Admin '{}' role set to ROLE_ADMIN.", adminUsername);
+            }
+
             if (admin.getEmail() == null || !admin.isEmailVerified()) {
                 admin.setEmail("admin@zelatancell.local");
                 admin.setEmailVerified(true);
+                changed = true;
+                log.info("Admin '{}' email and verification status updated.", adminUsername);
+            }
+
+            if (changed) {
                 userRepository.save(admin);
-                log.info("Admin 'Hanif18' email and verification status updated.");
             }
         }
     }
