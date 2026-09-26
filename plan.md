@@ -10,6 +10,9 @@ Disusun 25 September 2026, setelah penelaahan kode `backend/` dan `frontend/`.
 > - Fase 4 ✅ F15, F16, F17, F18, F19, voucher per pelanggan, F03, halaman kategori/provider dan edit profil, kode mati dihapus, build React disalin ke `static/`.
 > - Fase 5 (backlog) belum dikerjakan; tunggu persetujuan pembimbing.
 > - Hasil uji rinci: `backend/docs/CHECKLIST-PROGRES.md` bagian "Hasil uji 25 Sep 2026".
+> - **26 Sep 2026:** fitur dibekukan. Usulan judul baru "Pengembangan Sistem Informasi Penjualan dan Manajemen Persediaan Berbasis Web Terintegrasi Asisten AI pada Usaha Zelatan Cell"
+>   (menunggu pembimbing, `backend/docs/USULAN-PERUBAHAN-JUDUL.md`). Fokus: dokumen Black Box
+>   (`backend/docs/PENGUJIAN-BLACKBOX.md`) dan evaluasi AI (`backend/docs/EVALUASI-ASISTEN-AI.md`).
 >
 > Keputusan yang dipakai: default K1–K9 di bawah, dengan K5/K6 mengikuti OpenRouter + sesi tersimpan.
 

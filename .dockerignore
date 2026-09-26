@@ -1,0 +1,34 @@
+# Git & IDE
+.git
+.git_backup_submodule
+.github
+.idea
+.vscode
+*.log
+hs_err_pid*
+
+# File Kredensial Sensitif (JANGAN dimasukkan ke image)
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Frontend build cache & artifacts
+frontend/node_modules
+frontend/dist
+frontend/dist-ssr
+frontend/*.local
+
+# Backend build cache & artifacts
+backend/target
+backend/.mvn/wrapper/maven-wrapper.jar
+backend/.apt_generated
+backend/.classpath
+backend/.factorypath
+backend/.project
+backend/.settings
+backend/.springBeans
+backend/.sts4-cache
+backend/mysql-*.log
+backend/docs/eval
+backend/screenshots-bab4

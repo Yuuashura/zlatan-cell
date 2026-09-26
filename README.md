@@ -4,9 +4,14 @@ Aplikasi web konter pulsa **Zelatan Cell** (Desa Gentasari, Kroya, Cilacap): pen
 data, token listrik PLN, dan voucher game, lengkap dengan saldo akun, pembayaran Xendit, laporan
 penjualan, dan asisten AI untuk admin.
 
-Proyek skripsi *"Pengembangan Sistem Informasi Penjualan dan Manajemen Persediaan Berbasis Web
-Menggunakan Metode Waterfall pada Usaha Zelatan Cell"* — Hanif Fauzan Nurrahman (NIM 02032311025),
-S1 Teknik Informatika, Universitas Nasional Pasim. Versi ini adalah pengembangan v1 → v2.
+Proyek skripsi *"Pengembangan Sistem Informasi Penjualan dan Manajemen Persediaan Berbasis Web Terintegrasi Asisten AI pada Usaha Zelatan Cell"* — Hanif Fauzan Nurrahman (NIM 02032311025), S1 Teknik Informatika,
+Universitas Nasional Pasim. Versi ini adalah pengembangan v1 → v2.
+
+> Judul di atas adalah usulan perubahan (menambahkan "Terintegrasi Asisten AI", frasa metode tidak
+> lagi di judul; penelitian tetap memakai metode Waterfall) yang **menunggu
+> persetujuan pembimbing**. Judul proposal: *"Pengembangan Sistem Informasi Penjualan dan Manajemen
+> Persediaan Berbasis Web Menggunakan Metode Waterfall pada Usaha Zelatan Cell"*. Rincian:
+> [`backend/docs/USULAN-PERUBAHAN-JUDUL.md`](backend/docs/USULAN-PERUBAHAN-JUDUL.md).
 
 ---
 
