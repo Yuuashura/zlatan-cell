@@ -22,6 +22,19 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
                                         Authentication authentication) throws IOException {
-        response.sendRedirect(frontendUrl + "/?oauth_success=true");
+        String targetUrl;
+        // In production single-origin, if frontendUrl points to dev localhost:5173
+        // while the request is coming from a real host/domain, redirect relatively to stay on the same origin.
+        if (frontendUrl != null && !frontendUrl.isBlank() && !frontendUrl.contains("localhost:5173")) {
+            targetUrl = frontendUrl + "/?oauth_success=true";
+        } else if ("localhost".equalsIgnoreCase(request.getServerName()) || "127.0.0.1".equals(request.getServerName())) {
+            // Local development with separate Vite dev server
+            String devOrigin = (frontendUrl != null && !frontendUrl.isBlank()) ? frontendUrl : "http://localhost:5173";
+            targetUrl = devOrigin + "/?oauth_success=true";
+        } else {
+            // Production single-origin fallback: stay on current host
+            targetUrl = "/?oauth_success=true";
+        }
+        response.sendRedirect(targetUrl);
     }
 }
